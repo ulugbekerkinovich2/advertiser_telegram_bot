@@ -21,15 +21,18 @@ async def bot_start(message: types.Message):
     
     all_bots = send_req.get_all_bots()  # Assuming you get all bots from somewhere
     all_users = send_req.get_all_users()  # Assuming you get all users from somewhere
-    
+    ic(all_users)
+    ic(all_bots)
     if chat_id not in all_users:
+        ic('s')
         for bot in all_bots:
             if bot["api_key"] == BOT_TOKEN:  # Assuming BOT_TOKEN is defined somewhere
                 bot_id = bot["id"]
+                ic('ok')
                 send_req.save_chat_id(chat_id, firstname, lastname, bot_id, username, 'active')  # Assuming you have a function like this
-        await message.answer(f"Salom, {message.from_user.full_name}!")
+        await message.answer(f"Salom, {message.from_user.full_name}! {chat_id}", )
     else:
-        await message.answer(f"Siz uje borsiz, {message.from_user.full_name}!")
+        await message.answer(f"Siz  borsiz, {message.from_user.full_name}!")
 
 
 
@@ -56,18 +59,22 @@ async def bot_echo(message: types.Message, state: FSMContext):
     failed = 0
     count = 0
     for user_id in all_users:
+        ic(59, user_id)
         try:
-            await bot.send_message(user_id['chat_id'], text, parse_mode=types.ParseMode.HTML)
+            await bot.send_message(int(user_id['chat_id']), text, parse_mode=types.ParseMode.HTML)
             # Add a small delay to avoid being banned for spam
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.5)
+            
+            send_req.update_user(user_id['id'], user_id['chat_id'], user_id['firstname'], user_id['lastname'],user_id['bot_id'], user_id['username'], 'active', user_id['created_at'])
             count += 1
-            send_req.update_user(user_id['id'], user_id['chat_id'], user_id['firstname'], user_id['lastname'],user_id['bot_id'], user_id['username'], 'active')
         except Exception as e:
-            failed += 1 
-            send_req.update_user(user_id['id'], user_id['chat_id'], user_id['firstname'], user_id['lastname'],user_id['bot_id'], user_id['username'], 'blocked')
+            failed += 1
+            send_req.update_user(user_id['id'], user_id['chat_id'], user_id['firstname'], user_id['lastname'],user_id['bot_id'], user_id['username'], 'blocked', user_id['created_at'])
+             
             print(f"Failed to send message to user {user_id}: {e}")
-    await state.finish()
+    
     await message.reply(f"Reklama yuborildi! {count} ta userga, {failed} ta userga bormadi")
+    await state.finish()
     
 
 
@@ -107,15 +114,16 @@ async def process_image(message: types.Message, photo_file_id: str, caption: str
     count = 0
     for user_info in all_users:
         user_id = user_info.get('chat_id')
-        ic(user_id)
+        ic(11, user_id)
         try:
         # Parse the text as Markdown to make links clickable
             await bot.send_photo(user_id, photo=photo_file_id, caption=caption, parse_mode="HTML")
             
             # Add a small delay to avoid being banned for spam
             await asyncio.sleep(0.3)
+            
+            send_req.update_user(user_info['id'], user_info['chat_id'], user_info['firstname'], user_info['lastname'],user_info['bot_id'], user_info['username'], 'active', user_info['created_at'])
             count += 1
-            send_req.update_user(user_info['id'], user_info['chat_id'], user_info['firstname'], user_info['lastname'],user_info['bot_id'], user_info['username'], 'active')
         except Exception as e:
             failed += 1
             send_req.update_user(int(user_info.get('id')), user_info['chat_id'], user_info['firstname'], user_info['lastname'],user_info['bot_id'], user_info['username'], 'blocked',user_info['created_at'])
@@ -230,9 +238,10 @@ async def process_media(message: types.Message, media_file_id: str, caption: str
                 await bot.send_video(user_id, video=media_file_id, caption=caption)
             # Add a small delay to avoid being banned for spam
             await asyncio.sleep(0.1)
-            count += 1
             
             send_req.update_user(user_info['id'], user_info['chat_id'], user_info['firstname'], user_info['lastname'],user_info['bot_id'], user_info['username'], 'active', user_info['created_at'])
+            
+            count += 1
         except Exception as e:
             failed += 1
             send_req.update_user(int(user_info.get('id')), user_info['chat_id'], user_info['firstname'], user_info['lastname'],user_info['bot_id'], user_info['username'], 'blocked',user_info['created_at'])
